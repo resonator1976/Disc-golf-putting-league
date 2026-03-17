@@ -1,0 +1,1 @@
+This is a scorecard for a disc golf putting league. Players get two shots on each hole. 1 make on a basket equals 1 point, and 2 makes equals 3 points. At the end of each 9 holes there is an Ace hole worth 5 points.

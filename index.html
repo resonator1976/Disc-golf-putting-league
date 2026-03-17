@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Disc Golf" />
+<title>Disc Golf Putting League</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --green: #1D9E75; --green-light: #E1F5EE; --green-mid: #5DCAA5; --green-dark: #085041;
+    --pink: #D4537E; --pink-light: #FBEAF0;
+    --bg: #f7f8f5; --surface: #ffffff; --border: rgba(0,0,0,0.1); --border-strong: rgba(0,0,0,0.18);
+    --text: #1a1a18; --text-muted: #6b7068; --text-faint: #9ca399;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .app { max-width: 680px; margin: 0 auto; padding: 24px 16px 48px; }
+
+  .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+  .logo-disc { width: 36px; height: 36px; border-radius: 50%; background: var(--green); display: flex; align-items: center; justify-content: center; }
+  .logo-disc svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 2; }
+  .logo-text { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .logo-sub { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+
+  .card { background: var(--surface); border-radius: var(--radius); border: 0.5px solid var(--border); padding: 20px; margin-bottom: 14px; }
+  .card-title { font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .player-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .player-num { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-faint); width: 18px; flex-shrink: 0; }
+  input[type="text"] {
+    flex: 1; height: 40px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm);
+    padding: 0 12px; font-size: 15px; font-family: 'DM Sans', sans-serif; color: var(--text);
+    background: var(--bg); outline: none; transition: border-color 0.15s;
+  }
+  input[type="text"]:focus { border-color: var(--green); }
+  .remove-btn {
+    width: 32px; height: 32px; border-radius: 50%; border: 0.5px solid var(--border-strong);
+    background: transparent; color: var(--text-muted); cursor: pointer; font-size: 16px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.12s;
+  }
+  .remove-btn:hover { background: #fee; border-color: #fcc; color: #c55; }
+  .add-btn {
+    display: flex; align-items: center; gap: 6px; background: transparent;
+    border: 0.5px dashed var(--border-strong); border-radius: var(--radius-sm);
+    padding: 9px 14px; font-size: 14px; color: var(--text-muted); cursor: pointer;
+    width: 100%; margin-top: 4px; transition: border-color 0.15s, color 0.15s;
+  }
+  .add-btn:hover { border-color: var(--green); color: var(--green); }
+  .start-btn {
+    width: 100%; height: 48px; background: var(--green); color: #fff; border: none;
+    border-radius: var(--radius); font-size: 16px; font-weight: 600; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; letter-spacing: -0.01em; transition: background 0.15s; margin-top: 6px;
+  }
+  .start-btn:hover { background: var(--green-dark); }
+
+  .sc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .sc-title { font-size: 17px; font-weight: 600; }
+  .new-btn {
+    background: transparent; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm);
+    padding: 6px 12px; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    color: var(--text-muted); transition: background 0.12s;
+  }
+  .new-btn:hover { background: var(--bg); }
+
+  .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 0.5px solid var(--border); background: var(--surface); margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th {
+    font-weight: 500; color: var(--text-muted); text-align: center; padding: 8px 3px;
+    border-bottom: 0.5px solid var(--border); white-space: nowrap; font-size: 11px; background: var(--bg);
+  }
+  th.player-col { text-align: left; padding-left: 14px; min-width: 80px; }
+  th.ace-col { color: var(--pink); font-weight: 600; }
+  th.sub-col { color: var(--green-dark); font-weight: 600; }
+  td { text-align: center; padding: 6px 2px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  td.player-name { text-align: left; font-weight: 500; font-size: 13px; padding-left: 14px; white-space: nowrap; }
+  td.sub { background: var(--green-light); color: var(--green-dark); font-weight: 600; font-size: 13px; }
+  td.total { background: var(--green); color: #fff; font-weight: 600; font-size: 13px; }
+
+  .score-btn {
+    width: 30px; height: 30px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-strong);
+    background: var(--surface); color: var(--text); font-size: 12px; font-weight: 500;
+    cursor: pointer; font-family: 'DM Mono', monospace; transition: all 0.1s;
+  }
+  .score-btn:active { transform: scale(0.93); }
+  .score-btn.sel-reg { background: var(--green); color: #fff; border-color: var(--green); }
+  .score-btn.sel-ace { background: var(--pink); color: #fff; border-color: var(--pink); }
+
+  .legend { display: flex; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  .lb-title { font-size: 13px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .lb-row {
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius); margin-bottom: 7px;
+  }
+  .lb-row.gold { border-color: var(--green); background: var(--green-light); }
+  .lb-rank { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text-faint); width: 20px; }
+  .lb-name { flex: 1; font-weight: 500; font-size: 15px; }
+  .lb-score { font-size: 20px; font-weight: 600; color: var(--green); font-family: 'DM Mono', monospace; }
+  .lb-pts { font-size: 11px; color: var(--text-muted); margin-left: 2px; }
+
+  /* Output section */
+  .output-section { margin-top: 24px; }
+  .output-title { font-size: 13px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .output-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .out-btn {
+    display: flex; align-items: center; gap: 7px; padding: 10px 16px;
+    border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm);
+    background: var(--surface); color: var(--text); font-size: 13px; font-weight: 500;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.12s, border-color 0.12s;
+  }
+  .out-btn:hover { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
+  .out-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+  /* Print overlay */
+  .modal-bg {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    z-index: 100; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 20px;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: var(--surface); border-radius: var(--radius); border: 0.5px solid var(--border);
+    width: 100%; max-width: 640px; padding: 24px; margin: auto;
+  }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .modal-title { font-size: 16px; font-weight: 600; }
+  .close-btn {
+    width: 32px; height: 32px; border-radius: 50%; border: 0.5px solid var(--border-strong);
+    background: transparent; cursor: pointer; font-size: 18px; color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-actions { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+  .modal-btn {
+    padding: 10px 18px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-strong);
+    background: transparent; font-size: 14px; font-weight: 500; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; color: var(--text); transition: background 0.12s;
+  }
+  .modal-btn:hover { background: var(--bg); }
+  .modal-btn.primary { background: var(--green); color: #fff; border-color: var(--green); }
+  .modal-btn.primary:hover { background: var(--green-dark); }
+
+  /* Print styles */
+  @media print {
+    body { background: #fff; }
+    .app { padding: 0; max-width: 100%; }
+    #setup, #scorecard > .sc-header, .legend, #leaderboard, .output-section { display: none !important; }
+    .modal-bg { display: none !important; }
+    #print-area { display: block !important; }
+    .table-wrap { border: 1px solid #ccc; overflow: visible; }
+    table { font-size: 11px; }
+  }
+
+  #print-area { display: none; }
+
+  .preview-table-wrap { overflow-x: auto; margin-bottom: 16px; }
+  .preview-table-wrap table { font-size: 11px; }
+
+  .print-leaderboard { margin-top: 16px; }
+  .print-lb-row { display: flex; gap: 10px; padding: 8px 12px; border-bottom: 0.5px solid var(--border); font-size: 14px; }
+  .print-lb-row:last-child { border-bottom: none; }
+  .print-lb-rank { width: 24px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+  .print-lb-name { flex: 1; font-weight: 500; }
+  .print-lb-score { font-weight: 600; color: var(--green); font-family: 'DM Mono', monospace; }
+
+  @media (max-width: 480px) {
+    .app { padding: 16px 10px 40px; }
+    .score-btn { width: 26px; height: 26px; font-size: 11px; }
+    td { padding: 4px 1px; }
+    .out-btn { font-size: 12px; padding: 9px 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="logo">
+    <div class="logo-disc">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="3" x2="12" y2="9"/><line x1="12" y1="15" x2="12" y2="21"/><line x1="3" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="21" y2="12"/></svg>
+    </div>
+    <div>
+      <div class="logo-text">Disc Golf Putting League</div>
+      <div class="logo-sub">Scorecard</div>
+    </div>
+  </div>
+
+  <div id="setup">
+    <div class="card">
+      <div class="card-title">Players</div>
+      <div id="players-list"></div>
+      <button class="add-btn" id="add-btn" onclick="addPlayer()">+ Add player</button>
+    </div>
+    <button class="start-btn" onclick="startRound()">Start Round</button>
+  </div>
+
+  <div id="scorecard" style="display:none;">
+    <div class="sc-header">
+      <span class="sc-title">Scorecard</span>
+      <button class="new-btn" onclick="resetAll()">New Round</button>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Regular holes (0, 1, 3)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--pink)"></div>Ace hole (0 or 5)</div>
+    </div>
+    <div class="table-wrap">
+      <table id="score-table"></table>
+    </div>
+    <div id="leaderboard"></div>
+
+    <div class="output-section">
+      <div class="output-title">Share Results</div>
+      <div class="output-btns">
+        <button class="out-btn" onclick="openPrint()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print / Screenshot
+        </button>
+        <button class="out-btn" onclick="downloadCSV()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download CSV
+        </button>
+        <button class="out-btn" onclick="shareText()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Share via Text / Email
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Print/Preview Modal -->
+<div class="modal-bg" id="print-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Round Results</span>
+      <button class="close-btn" onclick="closePrint()">×</button>
+    </div>
+    <div id="print-preview"></div>
+    <div class="modal-actions">
+      <button class="modal-btn primary" onclick="doPrint()">Print / Save as PDF</button>
+      <button class="modal-btn" onclick="closePrint()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let players = [{name:'Player 1'},{name:'Player 2'}];
+let scores = [];
+const ACE1=9, ACE2=19, TOTAL=20;
+const REG=[0,1,3];
+
+function renderSetup() {
+  document.getElementById('players-list').innerHTML = players.map((p,i)=>`
+    <div class="player-row">
+      <span class="player-num">${i+1}</span>
+      <input type="text" value="${p.name}" oninput="players[${i}].name=this.value" placeholder="Player ${i+1}" />
+      ${players.length>1?`<button class="remove-btn" onclick="removePlayer(${i})">×</button>`:''}
+    </div>`).join('');
+  document.getElementById('add-btn').style.display=players.length<8?'flex':'none';
+}
+
+function addPlayer() { if(players.length<8){players.push({name:`Player ${players.length+1}`});renderSetup();} }
+function removePlayer(i) { players.splice(i,1);renderSetup(); }
+
+function startRound() {
+  players=players.map(p=>({...p,name:p.name.trim()||'Player'}));
+  scores=players.map(()=>Array(TOTAL).fill(null));
+  document.getElementById('setup').style.display='none';
+  document.getElementById('scorecard').style.display='block';
+  renderScorecard();
+}
+
+function setScore(pi,slot,val) { scores[pi][slot]=scores[pi][slot]===val?null:val; renderScorecard(); }
+function sum(pi,slots) { return slots.reduce((t,i)=>t+(scores[pi][i]||0),0); }
+const ALL_SLOTS=[0,1,2,3,4,5,6,7,8,ACE1,10,11,12,13,14,15,16,17,18,ACE2];
+const F9_SLOTS=[0,1,2,3,4,5,6,7,8,ACE1];
+const B9_SLOTS=[10,11,12,13,14,15,16,17,18,ACE2];
+
+function getRanked() {
+  return players.map((p,pi)=>({name:p.name,score:sum(pi,ALL_SLOTS),f9:sum(pi,F9_SLOTS),b9:sum(pi,B9_SLOTS)}))
+    .sort((a,b)=>b.score-a.score);
+}
+
+function renderScorecard() {
+  const t=document.getElementById('score-table');
+  let h='<thead><tr>';
+  h+='<th class="player-col">Player</th>';
+  for(let i=1;i<=9;i++) h+=`<th>${i}</th>`;
+  h+='<th class="ace-col">Ace</th><th class="sub-col">F9</th>';
+  for(let i=10;i<=18;i++) h+=`<th>${i}</th>`;
+  h+='<th class="ace-col">Ace</th><th class="sub-col">B9</th><th class="sub-col">Total</th>';
+  h+='</tr></thead><tbody>';
+  players.forEach((p,pi)=>{
+    h+=`<tr><td class="player-name">${p.name}</td>`;
+    for(let s=0;s<9;s++) h+=`<td>${regCell(pi,s)}</td>`;
+    h+=`<td>${aceCell(pi,ACE1)}</td>`;
+    const f9=sum(pi,F9_SLOTS);
+    h+=`<td class="sub">${f9}</td>`;
+    for(let s=10;s<19;s++) h+=`<td>${regCell(pi,s)}</td>`;
+    h+=`<td>${aceCell(pi,ACE2)}</td>`;
+    const b9=sum(pi,B9_SLOTS);
+    h+=`<td class="sub">${b9}</td>`;
+    h+=`<td class="total">${f9+b9}</td>`;
+    h+='</tr>';
+  });
+  h+='</tbody>';
+  t.innerHTML=h;
+  renderLeaderboard();
+}
+
+function regCell(pi,slot) {
+  return REG.map(v=>`<button class="score-btn${scores[pi][slot]===v?' sel-reg':''}" onclick="setScore(${pi},${slot},${v})">${v}</button>`).join('');
+}
+function aceCell(pi,slot) {
+  return [0,5].map(v=>`<button class="score-btn${scores[pi][slot]===v?' sel-ace':''}" onclick="setScore(${pi},${slot},${v})">${v}</button>`).join('');
+}
+
+function renderLeaderboard() {
+  const lb=document.getElementById('leaderboard');
+  const ranked=getRanked();
+  lb.innerHTML='<div class="lb-title">Leaderboard</div>'+
+    ranked.map((p,i)=>`
+      <div class="lb-row ${i===0?'gold':''}">
+        <span class="lb-rank">${i+1}</span>
+        <span class="lb-name">${p.name}</span>
+        <span class="lb-score">${p.score}<span class="lb-pts"> pts</span></span>
+      </div>`).join('');
+}
+
+// --- Output functions ---
+
+function buildScoreText() {
+  const date = new Date().toLocaleDateString();
+  let txt = `DISC GOLF PUTTING LEAGUE\n${date}\n\n`;
+  txt += '--- LEADERBOARD ---\n';
+  getRanked().forEach((p,i)=>{ txt+=`${i+1}. ${p.name} — ${p.score} pts (F9: ${p.f9} | B9: ${p.b9})\n`; });
+  txt += '\n--- FULL SCORECARD ---\n';
+  const hdr = ['Player','1','2','3','4','5','6','7','8','9','Ace','F9','10','11','12','13','14','15','16','17','18','Ace','B9','Total'];
+  txt += hdr.join('\t')+'\n';
+  players.forEach((p,pi)=>{
+    const row=[p.name];
+    for(let s=0;s<9;s++) row.push(scores[pi][s]!==null?scores[pi][s]:'-');
+    row.push(scores[pi][ACE1]!==null?scores[pi][ACE1]:'-');
+    const f9=sum(pi,F9_SLOTS); row.push(f9);
+    for(let s=10;s<19;s++) row.push(scores[pi][s]!==null?scores[pi][s]:'-');
+    row.push(scores[pi][ACE2]!==null?scores[pi][ACE2]:'-');
+    const b9=sum(pi,B9_SLOTS); row.push(b9);
+    row.push(f9+b9);
+    txt+=row.join('\t')+'\n';
+  });
+  return txt;
+}
+
+function downloadCSV() {
+  const date=new Date().toLocaleDateString('en-CA');
+  const hdr=['Player','H1','H2','H3','H4','H5','H6','H7','H8','H9','Ace1','F9','H10','H11','H12','H13','H14','H15','H16','H17','H18','Ace2','B9','Total'];
+  let csv=hdr.join(',')+'\n';
+  players.forEach((p,pi)=>{
+    const row=[`"${p.name}"`];
+    for(let s=0;s<9;s++) row.push(scores[pi][s]!==null?scores[pi][s]:'');
+    row.push(scores[pi][ACE1]!==null?scores[pi][ACE1]:'');
+    const f9=sum(pi,F9_SLOTS); row.push(f9);
+    for(let s=10;s<19;s++) row.push(scores[pi][s]!==null?scores[pi][s]:'');
+    row.push(scores[pi][ACE2]!==null?scores[pi][ACE2]:'');
+    const b9=sum(pi,B9_SLOTS); row.push(b9);
+    row.push(f9+b9);
+    csv+=row.join(',')+'\n';
+  });
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`disc_golf_scores_${date}.csv`;
+  a.click();
+}
+
+function shareText() {
+  const txt=buildScoreText();
+  if(navigator.share) {
+    navigator.share({title:'Disc Golf Putting League Results',text:txt}).catch(()=>{});
+  } else {
+    navigator.clipboard.writeText(txt).then(()=>{
+      alert('Results copied to clipboard! Paste into a text or email.');
+    }).catch(()=>{
+      prompt('Copy and share this text:', txt);
+    });
+  }
+}
+
+function openPrint() {
+  const ranked=getRanked();
+  const date=new Date().toLocaleDateString();
+  let html=`<div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">${date}</div>`;
+
+  // Leaderboard
+  html+=`<div style="font-size:13px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Leaderboard</div>`;
+  html+=`<div style="background:var(--bg);border-radius:var(--radius-sm);overflow:hidden;border:0.5px solid var(--border);margin-bottom:20px;">`;
+  ranked.forEach((p,i)=>{
+    html+=`<div class="print-lb-row" style="${i===0?'background:var(--green-light);':''}">
+      <span class="print-lb-rank">${i+1}</span>
+      <span class="print-lb-name">${p.name}</span>
+      <span style="font-size:12px;color:var(--text-muted);margin-right:8px;">F9: ${p.f9} &nbsp; B9: ${p.b9}</span>
+      <span class="print-lb-score">${p.score} pts</span>
+    </div>`;
+  });
+  html+=`</div>`;
+
+  // Scorecard table
+  html+=`<div style="font-size:13px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Full Scorecard</div>`;
+  html+=`<div class="preview-table-wrap"><table style="width:100%;border-collapse:collapse;font-size:11px;">`;
+  html+=`<thead><tr style="background:var(--bg);">`;
+  html+=`<th style="text-align:left;padding:6px 10px;border-bottom:0.5px solid var(--border);">Player</th>`;
+  for(let i=1;i<=9;i++) html+=`<th style="padding:6px 3px;border-bottom:0.5px solid var(--border);text-align:center;">${i}</th>`;
+  html+=`<th style="padding:6px 3px;border-bottom:0.5px solid var(--border);text-align:center;color:var(--pink);">Ace</th>`;
+  html+=`<th style="padding:6px 3px;border-bottom:0.5px solid var(--border);text-align:center;color:var(--green-dark);">F9</th>`;
+  for(let i=10;i<=18;i++) html+=`<th style="padding:6px 3px;border-bottom:0.5px solid var(--border);text-align:center;">${i}</th>`;
+  html+=`<th style="padding:6px 3px;border-bottom:0.5px solid var(--border);text-align:center;color:var(--pink);">Ace</th>`;
+  html+=`<th style="padding:6px 3px;border-bottom:0.5px solid var(--border);text-align:center;color:var(--green-dark);">B9</th>`;
+  html+=`<th style="padding:6px 3px;border-bottom:0.5px solid var(--border);text-align:center;color:var(--green-dark);">Total</th>`;
+  html+=`</tr></thead><tbody>`;
+
+  players.forEach((p,pi)=>{
+    html+=`<tr>`;
+    html+=`<td style="text-align:left;padding:6px 10px;border-bottom:0.5px solid var(--border);font-weight:500;">${p.name}</td>`;
+    for(let s=0;s<9;s++) html+=`<td style="text-align:center;padding:6px 3px;border-bottom:0.5px solid var(--border);">${scores[pi][s]!==null?scores[pi][s]:'-'}</td>`;
+    html+=`<td style="text-align:center;padding:6px 3px;border-bottom:0.5px solid var(--border);color:var(--pink);font-weight:600;">${scores[pi][ACE1]!==null?scores[pi][ACE1]:'-'}</td>`;
+    const f9=sum(pi,F9_SLOTS);
+    html+=`<td style="text-align:center;padding:6px 3px;border-bottom:0.5px solid var(--border);background:var(--green-light);color:var(--green-dark);font-weight:600;">${f9}</td>`;
+    for(let s=10;s<19;s++) html+=`<td style="text-align:center;padding:6px 3px;border-bottom:0.5px solid var(--border);">${scores[pi][s]!==null?scores[pi][s]:'-'}</td>`;
+    html+=`<td style="text-align:center;padding:6px 3px;border-bottom:0.5px solid var(--border);color:var(--pink);font-weight:600;">${scores[pi][ACE2]!==null?scores[pi][ACE2]:'-'}</td>`;
+    const b9=sum(pi,B9_SLOTS);
+    html+=`<td style="text-align:center;padding:6px 3px;border-bottom:0.5px solid var(--border);background:var(--green-light);color:var(--green-dark);font-weight:600;">${b9}</td>`;
+    html+=`<td style="text-align:center;padding:6px 3px;border-bottom:0.5px solid var(--border);background:var(--green);color:#fff;font-weight:600;">${f9+b9}</td>`;
+    html+=`</tr>`;
+  });
+  html+=`</tbody></table></div>`;
+
+  document.getElementById('print-preview').innerHTML=html;
+  document.getElementById('print-modal').classList.add('open');
+}
+
+function closePrint() { document.getElementById('print-modal').classList.remove('open'); }
+function doPrint() { window.print(); }
+
+function resetAll() {
+  document.getElementById('setup').style.display='block';
+  document.getElementById('scorecard').style.display='none';
+  renderSetup();
+}
+
+renderSetup();
+</script>
+</body>
+</html>

@@ -342,53 +342,37 @@ function renderLeaderboard() {
 function buildScoreText() {
   const date = new Date().toLocaleDateString();
   const ranked = getRanked();
+  const medals = ['🥇','🥈','🥉'];
 
-  // Helper: pad string to width
-  const padL = (s,w) => String(s).padStart(w);
-  const padR = (s,w) => String(s).padEnd(w);
-
-  // Figure out max player name width
-  const nameW = Math.max(6, ...players.map(p=>p.name.length));
-
-  let txt = `DISC GOLF PUTTING LEAGUE\n${date}\n`;
+  let txt = `🥏 Disc Golf Putting League\n${date}\n`;
 
   // --- LEADERBOARD ---
-  txt += `\n${'─'.repeat(nameW + 28)}\n`;
-  txt += ` LEADERBOARD\n`;
-  txt += `${'─'.repeat(nameW + 28)}\n`;
+  txt += `\n🏆 LEADERBOARD\n`;
   ranked.forEach((p,i)=>{
-    const rank = `${i+1}.`;
-    txt += ` ${padR(rank,3)} ${padR(p.name,nameW)}  ${padL(p.score,3)} pts   F9: ${padL(p.f9,2)}  B9: ${padL(p.b9,2)}\n`;
+    const icon = medals[i] || `${i+1}.`;
+    txt += `${icon} ${p.name} — ${p.score} pts\n`;
   });
 
-  // --- SCORECARD ---
-  const cols = ['1','2','3','4','5','6','7','8','9','F9','10','11','12','13','14','15','16','17','18','Ace','B9','Tot'];
-  const colW = 3;
-  const sep = `${'─'.repeat(nameW)}─${'─'.repeat(cols.length*(colW+1)+1)}\n`;
-
-  txt += `\n${'─'.repeat(nameW + cols.length*(colW+1) + 2)}\n`;
-  txt += ` SCORECARD\n`;
-  txt += sep;
-
-  // Header row
-  txt += ` ${padR('Player',nameW)} `;
-  cols.forEach(c => txt += `${padL(c,colW)} `);
-  txt += `\n${sep}`;
-
-  // Player rows
+  // --- HOLE-BY-HOLE ---
+  txt += `\n📋 SCORECARD\n`;
   players.forEach((p,pi)=>{
-    const row = [];
-    for(let s=0;s<9;s++) row.push(scores[pi][s]!==null?scores[pi][s]:'-');
-    const f9=sum(pi,F9_SLOTS); row.push(f9);
-    for(let s=9;s<18;s++) row.push(scores[pi][s]!==null?scores[pi][s]:'-');
-    row.push(scores[pi][ACE1]!==null?scores[pi][ACE1]:'-');
-    const b9=sum(pi,B9_SLOTS); row.push(b9);
-    row.push(f9+b9);
-    txt += ` ${padR(p.name,nameW)} `;
-    row.forEach(v => txt += `${padL(v,colW)} `);
-    txt += `\n`;
+    const f9 = sum(pi,F9_SLOTS);
+    const b9 = sum(pi,B9_SLOTS);
+    const total = f9 + b9;
+    txt += `\n${p.name} (${total} pts)\n`;
+
+    // Front 9
+    const f9holes = [];
+    for(let s=0;s<9;s++) f9holes.push(scores[pi][s]!==null?scores[pi][s]:'-');
+    txt += `  Front 9: ${f9holes.join('  ')}  (${f9})\n`;
+
+    // Back 9
+    const b9holes = [];
+    for(let s=9;s<18;s++) b9holes.push(scores[pi][s]!==null?scores[pi][s]:'-');
+    const ace = scores[pi][ACE1]!==null?scores[pi][ACE1]:'-';
+    txt += `  Back 9:  ${b9holes.join('  ')}  (${b9})\n`;
+    txt += `  Ace hole: ${ace}\n`;
   });
-  txt += sep;
 
   return txt;
 }

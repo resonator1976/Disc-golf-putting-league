@@ -76,9 +76,16 @@
   th.sub-col { color: var(--green-dark); font-weight: 600; }
   td { text-align: center; padding: 6px 2px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
-  td.player-name { text-align: left; font-weight: 500; font-size: 13px; padding-left: 14px; white-space: nowrap; }
+  td.player-name { text-align: left; font-weight: 500; font-size: 13px; padding-left: 14px; white-space: nowrap;
+    position: sticky; left: 0; background: var(--surface); z-index: 1;
+    border-right: 1px solid var(--border-strong); box-shadow: 2px 0 4px rgba(0,0,0,0.06); }
   td.sub { background: var(--green-light); color: var(--green-dark); font-weight: 600; font-size: 13px; }
   td.total { background: var(--green); color: #fff; font-weight: 600; font-size: 13px; }
+  th.player-col { position: sticky; left: 0; background: var(--bg); z-index: 2;
+    border-right: 1px solid var(--border-strong); box-shadow: 2px 0 4px rgba(0,0,0,0.06); }
+  /* Grid lines around each player row */
+  tbody tr { border-top: 1px solid rgba(0,0,0,0.3); border-bottom: 1px solid rgba(0,0,0,0.3); }
+  tbody tr td { border-left: 0.5px solid rgba(0,0,0,0.2); border-right: 0.5px solid rgba(0,0,0,0.2); }
 
   .score-btn {
     width: 30px; height: 30px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-strong);
@@ -205,7 +212,7 @@
     </div>
     <div class="legend">
       <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Regular holes (0, 1, 3)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--pink)"></div>Ace hole (0 or 5)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--pink)"></div>Ace hole (0 or 5) — after hole 18</div>
     </div>
     <div class="table-wrap">
       <table id="score-table"></table>
@@ -250,7 +257,7 @@
 <script>
 let players = [{name:'Player 1'},{name:'Player 2'}];
 let scores = [];
-const ACE1=9, ACE2=19, TOTAL=20;
+const ACE1=18, TOTAL=19;
 const REG=[0,1,3];
 
 function renderSetup() {
@@ -276,9 +283,9 @@ function startRound() {
 
 function setScore(pi,slot,val) { scores[pi][slot]=scores[pi][slot]===val?null:val; renderScorecard(); }
 function sum(pi,slots) { return slots.reduce((t,i)=>t+(scores[pi][i]||0),0); }
-const ALL_SLOTS=[0,1,2,3,4,5,6,7,8,ACE1,10,11,12,13,14,15,16,17,18,ACE2];
-const F9_SLOTS=[0,1,2,3,4,5,6,7,8,ACE1];
-const B9_SLOTS=[10,11,12,13,14,15,16,17,18,ACE2];
+const ALL_SLOTS=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,ACE1];
+const F9_SLOTS=[0,1,2,3,4,5,6,7,8];
+const B9_SLOTS=[9,10,11,12,13,14,15,16,17,ACE1];
 
 function getRanked() {
   return players.map((p,pi)=>({name:p.name,score:sum(pi,ALL_SLOTS),f9:sum(pi,F9_SLOTS),b9:sum(pi,B9_SLOTS)}))
@@ -290,18 +297,17 @@ function renderScorecard() {
   let h='<thead><tr>';
   h+='<th class="player-col">Player</th>';
   for(let i=1;i<=9;i++) h+=`<th>${i}</th>`;
-  h+='<th class="ace-col">Ace</th><th class="sub-col">F9</th>';
+  h+='<th class="sub-col">F9</th>';
   for(let i=10;i<=18;i++) h+=`<th>${i}</th>`;
   h+='<th class="ace-col">Ace</th><th class="sub-col">B9</th><th class="sub-col">Total</th>';
   h+='</tr></thead><tbody>';
   players.forEach((p,pi)=>{
     h+=`<tr><td class="player-name">${p.name}</td>`;
     for(let s=0;s<9;s++) h+=`<td>${regCell(pi,s)}</td>`;
-    h+=`<td>${aceCell(pi,ACE1)}</td>`;
     const f9=sum(pi,F9_SLOTS);
     h+=`<td class="sub">${f9}</td>`;
-    for(let s=10;s<19;s++) h+=`<td>${regCell(pi,s)}</td>`;
-    h+=`<td>${aceCell(pi,ACE2)}</td>`;
+    for(let s=9;s<18;s++) h+=`<td>${regCell(pi,s)}</td>`;
+    h+=`<td>${aceCell(pi,ACE1)}</td>`;
     const b9=sum(pi,B9_SLOTS);
     h+=`<td class="sub">${b9}</td>`;
     h+=`<td class="total">${f9+b9}</td>`;
@@ -335,37 +341,68 @@ function renderLeaderboard() {
 
 function buildScoreText() {
   const date = new Date().toLocaleDateString();
-  let txt = `DISC GOLF PUTTING LEAGUE\n${date}\n\n`;
-  txt += '--- LEADERBOARD ---\n';
-  getRanked().forEach((p,i)=>{ txt+=`${i+1}. ${p.name} — ${p.score} pts (F9: ${p.f9} | B9: ${p.b9})\n`; });
-  txt += '\n--- FULL SCORECARD ---\n';
-  const hdr = ['Player','1','2','3','4','5','6','7','8','9','Ace','F9','10','11','12','13','14','15','16','17','18','Ace','B9','Total'];
-  txt += hdr.join('\t')+'\n';
+  const ranked = getRanked();
+
+  // Helper: pad string to width
+  const padL = (s,w) => String(s).padStart(w);
+  const padR = (s,w) => String(s).padEnd(w);
+
+  // Figure out max player name width
+  const nameW = Math.max(6, ...players.map(p=>p.name.length));
+
+  let txt = `DISC GOLF PUTTING LEAGUE\n${date}\n`;
+
+  // --- LEADERBOARD ---
+  txt += `\n${'─'.repeat(nameW + 28)}\n`;
+  txt += ` LEADERBOARD\n`;
+  txt += `${'─'.repeat(nameW + 28)}\n`;
+  ranked.forEach((p,i)=>{
+    const rank = `${i+1}.`;
+    txt += ` ${padR(rank,3)} ${padR(p.name,nameW)}  ${padL(p.score,3)} pts   F9: ${padL(p.f9,2)}  B9: ${padL(p.b9,2)}\n`;
+  });
+
+  // --- SCORECARD ---
+  const cols = ['1','2','3','4','5','6','7','8','9','F9','10','11','12','13','14','15','16','17','18','Ace','B9','Tot'];
+  const colW = 3;
+  const sep = `${'─'.repeat(nameW)}─${'─'.repeat(cols.length*(colW+1)+1)}\n`;
+
+  txt += `\n${'─'.repeat(nameW + cols.length*(colW+1) + 2)}\n`;
+  txt += ` SCORECARD\n`;
+  txt += sep;
+
+  // Header row
+  txt += ` ${padR('Player',nameW)} `;
+  cols.forEach(c => txt += `${padL(c,colW)} `);
+  txt += `\n${sep}`;
+
+  // Player rows
   players.forEach((p,pi)=>{
-    const row=[p.name];
+    const row = [];
     for(let s=0;s<9;s++) row.push(scores[pi][s]!==null?scores[pi][s]:'-');
-    row.push(scores[pi][ACE1]!==null?scores[pi][ACE1]:'-');
     const f9=sum(pi,F9_SLOTS); row.push(f9);
-    for(let s=10;s<19;s++) row.push(scores[pi][s]!==null?scores[pi][s]:'-');
-    row.push(scores[pi][ACE2]!==null?scores[pi][ACE2]:'-');
+    for(let s=9;s<18;s++) row.push(scores[pi][s]!==null?scores[pi][s]:'-');
+    row.push(scores[pi][ACE1]!==null?scores[pi][ACE1]:'-');
     const b9=sum(pi,B9_SLOTS); row.push(b9);
     row.push(f9+b9);
-    txt+=row.join('\t')+'\n';
+    txt += ` ${padR(p.name,nameW)} `;
+    row.forEach(v => txt += `${padL(v,colW)} `);
+    txt += `\n`;
   });
+  txt += sep;
+
   return txt;
 }
 
 function downloadCSV() {
   const date=new Date().toLocaleDateString('en-CA');
-  const hdr=['Player','H1','H2','H3','H4','H5','H6','H7','H8','H9','Ace1','F9','H10','H11','H12','H13','H14','H15','H16','H17','H18','Ace2','B9','Total'];
+  const hdr=['Player','H1','H2','H3','H4','H5','H6','H7','H8','H9','F9','H10','H11','H12','H13','H14','H15','H16','H17','H18','Ace','B9','Total'];
   let csv=hdr.join(',')+'\n';
   players.forEach((p,pi)=>{
     const row=[`"${p.name}"`];
     for(let s=0;s<9;s++) row.push(scores[pi][s]!==null?scores[pi][s]:'');
-    row.push(scores[pi][ACE1]!==null?scores[pi][ACE1]:'');
     const f9=sum(pi,F9_SLOTS); row.push(f9);
-    for(let s=10;s<19;s++) row.push(scores[pi][s]!==null?scores[pi][s]:'');
-    row.push(scores[pi][ACE2]!==null?scores[pi][ACE2]:'');
+    for(let s=9;s<18;s++) row.push(scores[pi][s]!==null?scores[pi][s]:'');
+    row.push(scores[pi][ACE1]!==null?scores[pi][ACE1]:'');
     const b9=sum(pi,B9_SLOTS); row.push(b9);
     row.push(f9+b9);
     csv+=row.join(',')+'\n';
@@ -414,7 +451,6 @@ function openPrint() {
   html+=`<thead><tr style="background:var(--bg);">`;
   html+=`<th style="text-align:left;padding:6px 10px;border-bottom:0.5px solid var(--border);">Player</th>`;
   for(let i=1;i<=9;i++) html+=`<th style="padding:6px 3px;border-bottom:0.5px solid var(--border);text-align:center;">${i}</th>`;
-  html+=`<th style="padding:6px 3px;border-bottom:0.5px solid var(--border);text-align:center;color:var(--pink);">Ace</th>`;
   html+=`<th style="padding:6px 3px;border-bottom:0.5px solid var(--border);text-align:center;color:var(--green-dark);">F9</th>`;
   for(let i=10;i<=18;i++) html+=`<th style="padding:6px 3px;border-bottom:0.5px solid var(--border);text-align:center;">${i}</th>`;
   html+=`<th style="padding:6px 3px;border-bottom:0.5px solid var(--border);text-align:center;color:var(--pink);">Ace</th>`;
@@ -426,11 +462,10 @@ function openPrint() {
     html+=`<tr>`;
     html+=`<td style="text-align:left;padding:6px 10px;border-bottom:0.5px solid var(--border);font-weight:500;">${p.name}</td>`;
     for(let s=0;s<9;s++) html+=`<td style="text-align:center;padding:6px 3px;border-bottom:0.5px solid var(--border);">${scores[pi][s]!==null?scores[pi][s]:'-'}</td>`;
-    html+=`<td style="text-align:center;padding:6px 3px;border-bottom:0.5px solid var(--border);color:var(--pink);font-weight:600;">${scores[pi][ACE1]!==null?scores[pi][ACE1]:'-'}</td>`;
     const f9=sum(pi,F9_SLOTS);
     html+=`<td style="text-align:center;padding:6px 3px;border-bottom:0.5px solid var(--border);background:var(--green-light);color:var(--green-dark);font-weight:600;">${f9}</td>`;
-    for(let s=10;s<19;s++) html+=`<td style="text-align:center;padding:6px 3px;border-bottom:0.5px solid var(--border);">${scores[pi][s]!==null?scores[pi][s]:'-'}</td>`;
-    html+=`<td style="text-align:center;padding:6px 3px;border-bottom:0.5px solid var(--border);color:var(--pink);font-weight:600;">${scores[pi][ACE2]!==null?scores[pi][ACE2]:'-'}</td>`;
+    for(let s=9;s<18;s++) html+=`<td style="text-align:center;padding:6px 3px;border-bottom:0.5px solid var(--border);">${scores[pi][s]!==null?scores[pi][s]:'-'}</td>`;
+    html+=`<td style="text-align:center;padding:6px 3px;border-bottom:0.5px solid var(--border);color:var(--pink);font-weight:600;">${scores[pi][ACE1]!==null?scores[pi][ACE1]:'-'}</td>`;
     const b9=sum(pi,B9_SLOTS);
     html+=`<td style="text-align:center;padding:6px 3px;border-bottom:0.5px solid var(--border);background:var(--green-light);color:var(--green-dark);font-weight:600;">${b9}</td>`;
     html+=`<td style="text-align:center;padding:6px 3px;border-bottom:0.5px solid var(--border);background:var(--green);color:#fff;font-weight:600;">${f9+b9}</td>`;
@@ -443,7 +478,70 @@ function openPrint() {
 }
 
 function closePrint() { document.getElementById('print-modal').classList.remove('open'); }
-function doPrint() { window.print(); }
+
+function doPrint() {
+  const ranked=getRanked();
+  const date=new Date().toLocaleDateString();
+
+  let body=`<div style="font-size:12px;color:#6b7068;margin-bottom:14px;">Disc Golf Putting League &mdash; ${date}</div>`;
+
+  // Leaderboard
+  body+=`<div style="font-size:11px;font-weight:600;color:#6b7068;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Leaderboard</div>`;
+  body+=`<table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:13px;">`;
+  ranked.forEach((p,i)=>{
+    const bg=i===0?'#E1F5EE':'#fff';
+    body+=`<tr style="background:${bg};border:1px solid #ccc;">
+      <td style="padding:7px 10px;width:24px;color:#9ca399;font-family:monospace;">${i+1}</td>
+      <td style="padding:7px 10px;font-weight:500;">${p.name}</td>
+      <td style="padding:7px 10px;color:#6b7068;font-size:11px;">F9: ${p.f9} &nbsp;&nbsp; B9: ${p.b9}</td>
+      <td style="padding:7px 10px;text-align:right;font-weight:700;color:#1D9E75;font-family:monospace;">${p.score} pts</td>
+    </tr>`;
+  });
+  body+=`</table>`;
+
+  // Scorecard
+  body+=`<div style="font-size:11px;font-weight:600;color:#6b7068;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Full Scorecard</div>`;
+  body+=`<table style="width:100%;border-collapse:collapse;font-size:10px;">`;
+  body+=`<thead><tr style="background:#f7f8f5;">`;
+  body+=`<th style="text-align:left;padding:5px 8px;border:1px solid #bbb;white-space:nowrap;">Player</th>`;
+  for(let i=1;i<=9;i++) body+=`<th style="padding:5px 3px;border:1px solid #bbb;text-align:center;">${i}</th>`;
+  body+=`<th style="padding:5px 3px;border:1px solid #bbb;text-align:center;color:#085041;font-weight:700;">F9</th>`;
+  for(let i=10;i<=18;i++) body+=`<th style="padding:5px 3px;border:1px solid #bbb;text-align:center;">${i}</th>`;
+  body+=`<th style="padding:5px 3px;border:1px solid #bbb;text-align:center;color:#D4537E;font-weight:700;">Ace</th>`;
+  body+=`<th style="padding:5px 3px;border:1px solid #bbb;text-align:center;color:#085041;font-weight:700;">B9</th>`;
+  body+=`<th style="padding:5px 3px;border:1px solid #bbb;text-align:center;color:#085041;font-weight:700;">Total</th>`;
+  body+=`</tr></thead><tbody>`;
+
+  players.forEach((p,pi)=>{
+    body+=`<tr>`;
+    body+=`<td style="text-align:left;padding:5px 8px;border:1px solid #bbb;font-weight:600;white-space:nowrap;">${p.name}</td>`;
+    for(let s=0;s<9;s++) body+=`<td style="text-align:center;padding:5px 3px;border:1px solid #bbb;">${scores[pi][s]!==null?scores[pi][s]:'-'}</td>`;
+    const f9=sum(pi,F9_SLOTS);
+    body+=`<td style="text-align:center;padding:5px 3px;border:1px solid #bbb;background:#E1F5EE;color:#085041;font-weight:700;">${f9}</td>`;
+    for(let s=9;s<18;s++) body+=`<td style="text-align:center;padding:5px 3px;border:1px solid #bbb;">${scores[pi][s]!==null?scores[pi][s]:'-'}</td>`;
+    body+=`<td style="text-align:center;padding:5px 3px;border:1px solid #bbb;color:#D4537E;font-weight:700;">${scores[pi][ACE1]!==null?scores[pi][ACE1]:'-'}</td>`;
+    const b9=sum(pi,B9_SLOTS);
+    body+=`<td style="text-align:center;padding:5px 3px;border:1px solid #bbb;background:#E1F5EE;color:#085041;font-weight:700;">${b9}</td>`;
+    body+=`<td style="text-align:center;padding:5px 3px;border:1px solid #bbb;background:#1D9E75;color:#fff;font-weight:700;">${f9+b9}</td>`;
+    body+=`</tr>`;
+  });
+  body+=`</tbody></table>`;
+
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Disc Golf Results</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@500&display=swap" rel="stylesheet"/>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'DM Sans', sans-serif; color: #1a1a18; padding: 24px; }
+      table { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      @media print {
+        body { padding: 12px; }
+        @page { margin: 1cm; size: landscape; }
+      }
+    </style>
+  </head><body>${body}<script>window.onload=function(){window.print();}<\/script></body></html>`);
+  win.document.close();
+}
 
 function resetAll() {
   document.getElementById('setup').style.display='block';
